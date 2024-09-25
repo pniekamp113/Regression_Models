@@ -1,0 +1,118 @@
+---
+title: "Regression Models"
+author: "Patrick N"
+date: "2024-09-25"
+output: html_document
+---
+
+# Module 1
+
+### In statistics, parsimony is the principle of using a model with as few parameters as possible to achieve a satisfactory fit to data.
+
+### Regression to the mean
+
+```{r}
+
+install.packages("UsingR")
+library(UsingR)
+install.packages("reshape")
+library(reshape)
+library(ggplot2)
+
+#load data
+data(galton)
+head(galton)
+long <- melt(galton)
+long
+
+#plot data
+g <- ggplot(long, aes(x = value, fill = variable)) +
+  geom_histogram(colour = "black", binwidth = 1) +
+  facet_grid(.~variable)
+g
+
+```
+
+
+## Center of Mass calculations with R
+
+```{r}
+
+install.packages("manipulate")
+library(manipulate)
+
+
+  g <- ggplot(galton, aes(x = child)) + geom_histogram(fill = "salmon", colour = "black", binwidth = 1) +
+    geom_vline(xintercept = mean(galton$child), size =3)
+    
+  g
+
+  
+
+```
+
+
+## Create scatter plot
+
+```{r}
+
+ggplot(galton, aes(x = parent, y = child)) + geom_point()
+
+library(dplyr)
+
+freqData <- as.data.frame(table(galton$child, galton$parent))
+names(freqData) <- c("child", "parent", "freq")
+freqData$child <- as.numeric(as.character(freqData$child))
+freqData$parent <- as.numeric(as.character(freqData$parent))
+g <- ggplot(filter(freqData, freq > 0), aes(x = parent, y = child))
+g <- g  + scale_size(range = c(2, 20), guide = "none" )
+g <- g + geom_point(colour="grey50", aes(size = freq+20, show_guide = FALSE))
+g <- g + geom_point(aes(colour=freq, size = freq))
+g <- g + scale_colour_gradient(low = "lightblue", high="white")                    
+g
+
+
+```
+
+```{r, echo = TRUE, eval = FALSE}
+y <- galton$child - mean(galton$child)
+x <- galton$parent - mean(galton$parent)
+freqData <- as.data.frame(table(x, y))
+names(freqData) <- c("child", "parent", "freq")
+freqData$child <- as.numeric(as.character(freqData$child))
+freqData$parent <- as.numeric(as.character(freqData$parent))
+myPlot <- function(beta){
+    g <- ggplot(filter(freqData, freq > 0), aes(x = parent, y = child))
+    g <- g  + scale_size(range = c(2, 20), guide = "none" )
+    g <- g + geom_point(colour="grey50", aes(size = freq+20, show_guide = FALSE))
+    g <- g + geom_point(aes(colour=freq, size = freq))
+    g <- g + scale_colour_gradient(low = "lightblue", high="white")                     
+    g <- g + geom_abline(intercept = 0, slope = beta, size = 3)
+    mse <- mean( (y - beta * x) ^2 )
+    g <- g + ggtitle(paste("beta = ", beta, "mse = ", round(mse, 3)))
+    g
+}
+manipulate(myPlot(beta), beta = slider(0.6, 1.2, step = 0.02))
+
+```
+
+## The solution 
+### In the next few lectures we'll talk about why this is the solution
+```{r}
+lm(I(child - mean(child))~ I(parent - mean(parent)) - 1, data = galton)
+```
+
+```{r, fig.height=6,fig.width=7,echo=FALSE}
+freqData <- as.data.frame(table(galton$child, galton$parent))
+names(freqData) <- c("child", "parent", "freq")
+freqData$child <- as.numeric(as.character(freqData$child))
+freqData$parent <- as.numeric(as.character(freqData$parent))
+g <- ggplot(filter(freqData, freq > 0), aes(x = parent, y = child))
+g <- g  + scale_size(range = c(2, 20), guide = "none" )
+g <- g + geom_point(colour="grey50", aes(size = freq+20, show_guide = FALSE))
+g <- g + geom_point(aes(colour=freq, size = freq))
+g <- g + scale_colour_gradient(low = "lightblue", high="white")                    
+lm1 <- lm(galton$child ~ galton$parent)
+g <- g + geom_abline(intercept = coef(lm1)[1], slope = coef(lm1)[2], size = 3, colour = grey(.5))
+g
+```
