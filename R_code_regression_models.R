@@ -124,3 +124,110 @@ summary(mod)
 
 x <- c(0.8, 0.47, 0.51, 0.73, 0.36, 0.58, 0.57, 0.85, 0.44, 0.42)
 mean(x)
+
+
+#Inference in regression
+
+library(UsingR); data(diamond)
+y <- diamond$price; x <- diamond$carat; n <- length(y)
+beta1 <- cor(y, x) * sd(y) / sd(x)
+beta0 <- mean(y) - beta1 * mean(x)
+e <- y - beta0 - beta1 * x
+sigma <- sqrt(sum(e^2) / (n-2)) 
+ssx <- sum((x - mean(x))^2)
+seBeta0 <- (1 / n + mean(x) ^ 2 / ssx) ^ .5 * sigma 
+seBeta1 <- sigma / sqrt(ssx)
+tBeta0 <- beta0 / seBeta0; tBeta1 <- beta1 / seBeta1
+pBeta0 <- 2 * pt(abs(tBeta0), df = n - 2, lower.tail = FALSE)
+pBeta1 <- 2 * pt(abs(tBeta1), df = n - 2, lower.tail = FALSE)
+coefTable <- rbind(c(beta0, seBeta0, tBeta0, pBeta0), c(beta1, seBeta1, tBeta1, pBeta1))
+colnames(coefTable) <- c("Estimate", "Std. Error", "t value", "P(>|t|)")
+rownames(coefTable) <- c("(Intercept)", "x")
+
+coefTable
+fit <- lm(y~x)
+summary(fit)$coef
+summary(fit)
+
+sumCoef <- summary(fit)$coefficients
+sumCoef
+
+#getting the confidence interval
+
+sumCoef <- summary(fit)$coefficients
+sumCoef[1,1] + c(-1, 1) * qt(.975, df = fit$df) * sumCoef[1, 2]
+(sumCoef[2,1] + c(-1, 1) * qt(.975, df = fit$df) * sumCoef[2, 2]) / 10
+
+#predictions
+
+newx = data.frame(x = seq(min(x), max(x), length = 100))
+p1 = data.frame(predict(fit, newdata= newx,interval = ("confidence")))
+p2 = data.frame(predict(fit, newdata = newx,interval = ("prediction")))
+p1$interval = "confidence"
+p2$interval = "prediction"
+p1$x = newx$x
+p2$x = newx$x
+dat = rbind(p1, p2)
+names(dat)[1] = "y"
+
+g = ggplot(dat, aes(x = x, y = y))
+g = g + geom_ribbon(aes(ymin = lwr, ymax = upr, fill = interval), alpha = 0.2) 
+g = g + geom_line()
+g = g + geom_point(data = data.frame(x = x, y=y), aes(x = x, y = y), size = 4)
+g
+
+
+
+#Qiuz
+
+x <- c(0.61, 0.93, 0.83, 0.35, 0.54, 0.16, 0.91, 0.62, 0.62)
+y <- c(0.67, 0.84, 0.6, 0.18, 0.85, 0.47, 1.1, 0.65, 0.36)
+fit <- lm(y~x)
+summary(fit)
+
+data(mtcars)
+
+fit1 <- lm(mtcars$wt ~ mtcars$mpg)
+summary(fit1)
+confint(fit1, level = .95)
+?confint
+
+fit2 <- lm(mtcars$wt ~ mtcars$mpg)
+summary(fit2)
+
+
+
+fit1 <- lm(mpg ~ wt, data = mtcars)
+new_car <- data.frame(wt = 3)
+
+prediction <- predict(fit1, newdata = new_car, interval = "prediction", level = 0.95)
+prediction
+
+
+#short ton = 2,000, wt = 2
+
+fit1 <- lm(mpg ~ wt, data = mtcars)
+# Get the confidence intervals for the coefficients
+confint_vals <- confint(fit1)
+confint_vals
+# Extract the confidence interval for the 'wt' coefficient
+# Multiply by 2 to convert to short tons (since 'wt' is in 1,000 lbs)
+ci_short_ton <- confint_vals["wt", ] * 2
+ci_short_ton
+
+# Fit the model with only the intercept
+model_intercept <- lm(mpg ~ 1, data = mtcars)
+model_full <- lm(mpg ~ wt, data = mtcars)
+# Calculate the sum of squared errors for both models
+sse_intercept <- sum(residuals(model_intercept)^2)  # TSS
+sse_full <- sum(residuals(model_full)^2)  # RSS
+# Calculate the ratio
+ratio <- sse_full / sse_intercept
+ratio
+
+
+
+model <- lm(mpg~wt, data = mtcars)
+avg_weight <- mean(mtcars$wt)
+new_data <- data.frame(wt = avg_weight)
+predict(model, newdata = new_data, interval = "confidence", level = 0.95)
