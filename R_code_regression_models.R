@@ -6,6 +6,7 @@ library(ggplot2)
 library(manipulate)
 library(dplyr)
 library(swirl)
+library(GGally)
 install_from_swirl("Regression Models")
 
 
@@ -231,3 +232,286 @@ model <- lm(mpg~wt, data = mtcars)
 avg_weight <- mean(mtcars$wt)
 new_data <- data.frame(wt = avg_weight)
 predict(model, newdata = new_data, interval = "confidence", level = 0.95)
+
+
+#Multivariant analysis
+#Multivariable regression analysis
+#exclude confounding factors (e.g. only compare all smokers)
+
+n = 100; x = rnorm(n); x2 = rnorm(n); x3 = rnorm(n)
+x
+x2
+?rnorm
+
+y = 1 + x + x2 + x3 + rnorm(n, sd = .1)
+plot(x, y)
+
+ey = resid(lm(y~x2 + x3))
+ex = resid(lm(x ~x2 + x3))
+sum(ey * ex) /  sum(ex^2)
+coef(lm(y~x+x2+x3))
+
+#interpretations of a multivariate regression coefficient is the expected change in the response per unit change in the regressor, while holding all
+#other regressors fixed
+
+
+require(datasets)
+data(swiss)
+?swiss
+
+head(swiss)
+g = ggpairs(swiss, lower = list(continuous = "smooth"))
+g
+
+summary(lm(Fertility ~ . , data = swiss))
+cor(swiss)
+summary(lm(Fertility ~ Agriculture , data = swiss))
+
+#Simpsons paradox
+
+#How can adjustment reverse the sign of an effect? Let's try a simulation.
+
+n <- 100; x2 <- 1 : n; x1 <- .01 * x2 + runif(n, -.1, .1); y = -x1 + x2 + rnorm(n, sd = .01)
+
+summary(lm(y ~ x1))$coef
+summary(lm(y ~ x1 + x2))$coef
+
+
+require(datasets);data(InsectSprays); require(stats); require(ggplot2)
+g = ggplot(data = InsectSprays, aes(y = count, x = spray, fill  = spray))
+g = g + geom_violin(colour = "black", size = 2)
+g = g + xlab("Type of spray") + ylab("Insect count")
+g
+
+summary(lm(count ~ spray, data = InsectSprays))$coef
+
+head(swiss)
+
+hist(swiss$Catholic)
+swiss <- mutate(swiss, CatholicBin = 1 * (Catholic > 50))
+head(swiss)
+
+
+g = ggplot(swiss, aes(x = Agriculture, y = Fertility, colour = factor(CatholicBin)))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("% in Agriculture") + ylab("Fertility")
+g
+
+#Two lines -> one for catholic and one for protestant. 
+fit = lm(Fertility ~ Agriculture, data = swiss)
+g1 = g
+g1 = g1 + geom_abline(intercept = coef(fit) [1], slope = coef(fit)[2], size = 2)
+g1
+summary(fit)
+
+
+fit1 = lm(Fertility ~ Agriculture + factor(CatholicBin), data = swiss)
+summary(fit1)
+
+fit = lm(Fertility ~ Agriculture + factor(CatholicBin), data = swiss)
+g1 = g
+g1 = g1 + geom_abline(intercept = coef(fit)[1], slope = coef(fit)[2], size = 2)
+g1 = g1 + geom_abline(intercept = coef(fit)[1] + coef(fit)[3], slope = coef(fit)[2], size = 2)
+g1
+
+fit = lm(Fertility ~ Agriculture * factor(CatholicBin), data = swiss)
+g1 = g
+g1 = g1 + geom_abline(intercept = coef(fit)[1], slope = coef(fit)[2], size = 2, colour = "blue")
+g1 = g1 + geom_abline(intercept = coef(fit)[1] + coef(fit)[3], 
+                      slope = coef(fit)[2] + coef(fit)[4], size = 2, colour = "red")
+g1
+summary(fit)
+
+#Adjustment, is the idea of putting regressors into a linear model to investigate the role of a third variable on the relationship between another two. 
+
+
+t
+x
+
+set.seed(2)
+a <- runif(1000, -1, 1)
+b <- rnorm(1000, 0, 1)
+a
+b
+mean(a)
+mean(b)
+hist(a)
+hist(b)
+
+n <- 100; t <- rep(c(0, 1), c(n/2, n/2)); x <- c(runif(n/2), runif(n/2));
+
+beta0 <- 0; beta1 <- 2; tau <- 1; sigma <- .2
+y <- beta0 + x * beta1 + t * tau + rnorm(n, sd = sigma)
+plot(x, y, type = "n", frame = FALSE)
+abline(lm(y ~ x), lwd = 2)
+abline(h = mean(y[1 : (n/2)]), lwd = 3)
+abline(h = mean(y[(n/2 + 1) : n]), lwd = 3)
+fit <- lm(y ~ x + t)
+abline(coef(fit)[1], coef(fit)[2], lwd = 3)
+abline(coef(fit)[1] + coef(fit)[3], coef(fit)[2], lwd = 3)
+points(x[1 : (n/2)], y[1 : (n/2)], pch = 21, col = "black", bg = "lightblue", cex = 2)
+points(x[(n/2 + 1) : n], y[(n/2 + 1) : n], pch = 21, col = "black", bg = "salmon", cex = 2)
+
+
+n <- 100; t <- rep(c(0, 1), c(n/2, n/2)); x <- c(runif(n/2), 1.5 + runif(n/2));
+beta0 <- 0; beta1 <- 2; tau <- 0; sigma <- .2
+y <- beta0 + x * beta1 + t * tau + rnorm(n, sd = sigma)
+plot(x, y, type = "n", frame = FALSE)
+abline(lm(y ~ x), lwd = 2)
+abline(h = mean(y[1 : (n/2)]), lwd = 3)
+abline(h = mean(y[(n/2 + 1) : n]), lwd = 3)
+fit <- lm(y ~ x + t)
+abline(coef(fit)[1], coef(fit)[2], lwd = 3)
+abline(coef(fit)[1] + coef(fit)[3], coef(fit)[2], lwd = 3)
+points(x[1 : (n/2)], y[1 : (n/2)], pch = 21, col = "black", bg = "lightblue", cex = 2)
+points(x[(n/2 + 1) : n], y[(n/2 + 1) : n], pch = 21, col = "black", bg = "salmon", cex = 2)
+
+
+
+###
+
+data(swiss); par(mfrow = c(2, 2))
+fit <- lm(Fertility ~ . , data = swiss); plot(fit)
+
+
+n <- 100; x <- rnorm(n); y <- x + rnorm(n, sd = .3)
+plot(c(-3, 6), c(-3, 6), type = "n", frame = FALSE, xlab = "X", ylab = "Y")
+abline(lm(y ~ x), lwd = 2)
+points(x, y, cex = 2, bg = "lightblue", col = "black", pch = 21)
+points(0, 0, cex = 2, bg = "darkorange", col = "black", pch = 21)
+points(0, 5, cex = 2, bg = "darkorange", col = "black", pch = 21)
+points(5, 5, cex = 2, bg = "darkorange", col = "black", pch = 21)
+points(5, 0, cex = 2, bg = "darkorange", col = "black", pch = 21)
+
+x <- c(10, rnorm(n)); y <- c(10, c(rnorm(n)))
+plot(x, y, frame = FALSE, cex = 2, pch = 21, bg = "lightblue", col = "black")
+abline(lm(y ~ x))
+
+fit <- lm(y ~ x)
+round(dfbetas(fit)[1 : 10, 2], 3)
+round(hatvalues(fit)[1 : 10], 3)
+
+
+x <- rnorm(n); y <- x + rnorm(n, sd = .3)
+x <- c(5, x); y <- c(5, y)
+plot(x, y, frame = FALSE, cex = 2, pch = 21, bg = "lightblue", col = "black")
+fit2 <- lm(y ~ x)
+abline(fit2)    
+
+round(dfbetas(fit2)[1 : 10, 2], 3)
+round(hatvalues(fit2)[1 : 10], 3)
+
+
+###
+
+n <- 100; nosim <- 1000
+x1 <- rnorm(n); x2 <- rnorm(n); x3 <- rnorm(n); 
+betas <- sapply(1 : nosim, function(i){
+  y <- x1 + rnorm(n, sd = .3)
+  c(coef(lm(y ~ x1))[2], 
+    coef(lm(y ~ x1 + x2))[2], 
+    coef(lm(y ~ x1 + x2 + x3))[2])
+})
+round(apply(betas, 1, sd), 5)
+s
+plot(x1)
+plot(x2)
+plot(x3)
+plot(x1, x2)
+
+
+library(car)
+fit <- lm(Fertility ~ ., data = swiss)
+vif(fit)
+sqrt(vif(fit))
+
+
+data("mtcars")
+head(mtcars)
+
+mtcars$cyl <- as.factor(mtcars$cyl)
+fit <- lm(mpg ~ wt + cyl, data = mtcars)
+summary(fit)
+
+prediction <- predict(fit, newdata = mtcars, interval = "prediction", level = 0.95)
+prediction
+
+mtcars$predicted_mpg <- predict(fit)
+mtcars
+
+# Create a ggplot
+ggplot(mtcars, aes(x = wt, y = mpg, color = cyl)) +
+  geom_point(size = 3) +  # Plot original data points
+  geom_line(aes(y = predicted_mpg), size = 1) +  # Add predicted mpg line
+  labs(title = "Relationship Between Weight, Number of Cylinders, and MPG",
+       x = "Weight (1000 lbs)",
+       y = "Miles Per Gallon (MPG)",
+       color = "Number of Cylinders") +
+  theme_minimal()
+
+fit_adjust <- lm(mpg ~ cyl + wt, data = mtcars)
+fit_unadjust <- lm(mpg ~ cyl, data = mtcars)
+
+summary(fit_adjust)
+summary(fit_unadjust) #estimates are higher when wt is excluded (constant)
+
+#Question 3
+
+fit1 <- lm(mpg ~ cyl + wt, data = mtcars)
+fit2 <- lm(mpg ~ cyl * wt, data = mtcars) #considers interaction between cyl and wt
+
+summary(fit1)
+summary(fit2)
+
+# Perform a likelihood ratio test using anova()
+lrt_result <- anova(fit1, fit2)
+lrt_result
+
+#Question 4
+
+model <- lm(mpg ~ I(wt * 0.5) + factor(cyl), data = mtcars)
+predict_new <- predict(model)
+mtcars$predict_new <- predict(model)
+mtcars
+
+# Create a ggplot# Creamodel_interceptte a ggplot
+ggplot(mtcars, aes(x = wt, y = mpg, color = cyl)) +
+  geom_point(size = 3) +  # Plot original data points
+  geom_line(aes(y = predict_new), size = 1) +  # Add predicted mpg line
+  labs(title = "Relationship Between Weight, Number of Cylinders, and MPG",
+       x = "Weight (1000 lbs)",
+       y = "Miles Per Gallon (MPG)",
+       color = "Number of Cylinders") +
+  theme_minimal()
+
+mtcars
+summary(model)
+
+
+#Question 5
+
+x <- c(0.586, 0.166, -0.042, -0.614, 11.72)
+y <- c(0.549, -0.026, -0.127, -0.751, 1.344)
+
+plot(x,y)
+
+fit <- lm(y~x)
+hatvalues(fit)
+
+
+#Question 6
+
+x <- c(0.586, 0.166, -0.042, -0.614, 11.72)
+y <- c(0.549, -0.026, -0.127, -0.751, 1.344)
+
+plot(x,y)
+
+dfbetas(fit)
+
+
+#Question 4
+
+
+lm(mpg ~ I(wt * 0.5) + factor(cyl), data = mtcars)
+
+
