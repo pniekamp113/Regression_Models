@@ -1,0 +1,120 @@
+#Generalized linear models
+
+library(UsingR)
+library(reshape)
+library(ggplot2)
+library(manipulate)
+library(dplyr)
+library(swirl)
+library(GGally)
+
+#An exponential family model for the response
+#A systematic component via a linear predictor
+#A link that connects the means of the response to the linear predictor
+
+getwd()
+list.files()
+load("ravensData.rda")
+head(ravensData)
+
+lmRavens <- lm(ravenWinNum ~ ravenScore, data = ravensData)
+summary(lmRavens)
+
+#per point there is a 0.016 increase in change to win (1 means win, 0 lose)
+
+x <- seq(-10, 10, length = 1000)
+manipulate(
+  plot(x, exp(beta0 + beta1 * x) / (1 + exp(beta0 + beta1 * x)), 
+       type = "l", lwd = 3, frame = FALSE),
+  beta1 = slider(-2, 2, step = .1, initial = 2),
+  beta0 = slider(-2, 2, step = .1, initial = 0)
+)
+
+logRegRavens <- glm(ravensData$ravenWinNum ~ ravensData$ravenScore,family="binomial")
+summary(logRegRavens)
+logRegRavens$fitted.values
+
+
+#0.1 increase in probability for each score
+
+plot(ravensData$ravenScore,logRegRavens$fitted,pch=19,col="blue",xlab="Score",ylab="Prob Ravens Win")
+
+exp(logRegRavens$coeff)
+#sugest a 11% increase in winning if the ravens score
+exp(confint(logRegRavens))
+
+anova(logRegRavens,test="Chisq")
+
+
+#Poisson regression
+
+x <- rpois(1000, 1)
+y <- rpois(1000, 1)
+x
+mean(x)
+mean(y)
+plot(x, y)
+
+x <- 0 : 10000; lambda = 3
+x
+mean(x)
+mu <- sum(x * dpois(x, lambda = lambda))
+sigmasq <- sum((x - mu)^2 * dpois(x, lambda = lambda))
+c(mu, sigmasq)
+
+dev.off()
+load("gaData.rda")
+gaData$julian <- julian(gaData$date)
+head(gaData)
+plot(gaData$julian,gaData$visits,pch=19,col="darkgrey",xlab="Julian",ylab="Visits")
+
+fit <- lm(gaData$visits ~ gaData$julian)
+summary(fit)
+predict <- predict(fit)
+predict
+
+ggplot(gaData, aes(x = julian, y = visits)) +
+  geom_point(size = 3, colour = "black", alpha = 0.5) +
+  geom_smooth(method = "lm", colour = "red")
+
+#There's a problem with logs with you have zero counts, adding a constant works
+round(exp(coef(lm(I(log(gaData$visits + 1)) ~ gaData$julian))), 5)
+#0.2% increase in visits per day
+
+
+install.packages("sandwich")
+library(sandwich)
+confint.agnostic <- function (object, parm, level = 0.95, ...)
+{
+  cf <- coef(object); pnames <- names(cf)
+  if (missing(parm))
+    parm <- pnames
+  else if (is.numeric(parm))
+    parm <- pnames[parm]
+  a <- (1 - level)/2; a <- c(a, 1 - a)
+  pct <- stats:::format.perc(a, 3)
+  fac <- qnorm(a)
+  ci <- array(NA, dim = c(length(parm), 2L), dimnames = list(parm,
+                                                             pct))
+  ses <- sqrt(diag(sandwich::vcovHC(object)))[parm]
+  ci[] <- cf[parm] + ses %o% fac
+  ci
+}
+
+confint(glm1)
+#confint.agnostic(glm1)
+
+#fitting rates / adding offsets
+
+glm2 <- glm(gaData$simplystats ~ julian(gaData$date),offset=log(visits+1),
+            family="poisson",data=gaData)
+plot(julian(gaData$date),glm2$fitted,col="blue",pch=19,xlab="Date",ylab="Fitted Counts")
+points(julian(gaData$date),glm1$fitted,col="red",pch=19)
+
+
+glm2 <- glm(gaData$simplystats ~ julian(gaData$date),offset=log(visits+1),
+            family="poisson",data=gaData)
+plot(julian(gaData$date),gaData$simplystats/(gaData$visits+1),col="grey",xlab="Date",
+     ylab="Fitted Rates",pch=19)
+lines(julian(gaData$date),glm2$fitted/(gaData$visits+1),col="blue",lwd=3)
+
