@@ -515,3 +515,39 @@ dfbetas(fit)
 lm(mpg ~ I(wt * 0.5) + factor(cyl), data = mtcars)
 
 
+
+####
+#Quiz
+
+#Question 1
+
+?shuttle
+library(MASS)
+data(shuttle)
+head(shuttle)
+
+unique(shuttle$use)
+
+#make "use" numeric 
+shuttle$use_numeric <- ifelse(shuttle$use == "auto", 1, 0)
+#shuttle$wind_numeric <- ifelse(shuttle$wind == "head", 1, 0)
+
+model <- glm(use_numeric ~ wind, data = shuttle, family = binomial)
+summary(model)
+predict <- predict(model)
+
+odds_ratio <- 1/exp(coef(model)["windtail"])
+odds_ratio
+
+ggplot(shuttle, aes(x = use_numeric, y = wind)) +
+  geom_point(size = 3) +  # Plot original data points
+  geom_line(aes(y = predict), size = 1) +
+  theme_minimal()
+
+
+#Question 2
+
+model <- glm(use_numeric ~ wind + magn, data = shuttle, family = binomial)
+summary(model)
+
+
