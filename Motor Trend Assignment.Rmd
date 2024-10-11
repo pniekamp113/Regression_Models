@@ -1,0 +1,30 @@
+---
+title: "Motor Trend"
+author: "Patrick N"
+date: "2024-10-11"
+output: html_document
+---
+
+## Summary
+
+
+
+
+
+
+
+
+```{r setup, include=FALSE}
+library(UsingR)
+library(reshape)
+library(ggplot2)
+library(manipulate)
+library(dplyr)
+library(swirl)
+library(GGally)
+
+
+```
+
+## R Markdown
+
