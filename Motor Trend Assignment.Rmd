@@ -1,16 +1,15 @@
 ---
-title: "Motor Trend"
+title: "Motor Trend Regression Model Analysis"
 author: "Patrick N"
 date: "2024-10-11"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ## Summary
-
-
-
-
-
+### In this report, the mtcars data set was analyzed and the relationship between a set of variables and mile per gallon (MPG) was explored.
+### A regression analysis shows that manual transmission uses on average 7.24 MPG more compared to automatic transmission. However, the low R-squared value of 0.338 combined with exploratory data analysis suggests that other variables influence the interaction. Further analysis, reveals a model whereby, the variables weight (wt), 1/4 mile time (qsec), transmission (am) and the interaction of wt and am explain 88% of the variance in MPG. Residual analysis and diagnostics indicates no clear outliers and a normal distribution of residuals. 
 
 
 
@@ -23,8 +22,121 @@ library(dplyr)
 library(swirl)
 library(GGally)
 
+data(mtcars)
+head(mtcars)
+?mtcars
 
 ```
 
-## R Markdown
+# 1. Modeling and interpretation of coefficients
+
+## 1.1 Plot of average MPG for manual and automatic transmission
+
+```{r}
+
+boxplot(mtcars$mpg ~ mtcars$am, xlab="Transmission (0 = Automatic, 1 = Manual)", ylab="MPG",
+        main="Boxplot of MPG vs. Transmission")
+
+```
+
+## 1.2 Regression analysis
+```{r}
+
+fit <- lm(mpg ~ factor(am), data = mtcars)
+summary(fit)
+fit$coefficients
+
+t_test <- t.test(mtcars$mpg ~ mtcars$am)
+print(t_test$p.value)
+
+```
+### With only automatic vs manual as the predictor, shifting from automatic to manual would suggest an average increase of 7.25mpg. The results appears to be significant with a p-value of 0.0013. However, the R-squared is only 0.3385, which means that only 34% of the variance can be explained by transmission type. Therefore, we need to explore if other variables influence the outcome. 
+
+
+
+# 2. Exploratory data analysis
+### To get an impression if other variables influence the effect stated above, we need to perform some exploratory data analysis. 
+
+## 2.1 Using ggally libary, plot all possible relations for quick exploratory data analysis
+
+```{r}
+
+ggpairs(mtcars, lower = list(continuous = "smooth"), title = "Pair Graph of mtcars variables")
+
+```
+
+
+
+## 2.2 Example for confounding variables (cyl)
+
+```{r}
+
+#Group cars by number of cylinders and show how many have automatic vs manual transmission. Number of cylinders has an impact on mpg
+
+mtcars_new <- mtcars
+mtcars_new$am <- factor(mtcars$am, labels = c("Automatic", "Manual"))
+mtcars_new$cyl <- factor(mtcars$cyl)
+
+ggplot(mtcars_new, aes(x = cyl, fill = am)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Number of Automatic vs Manual Cars by Cylinders",
+       x = "Number of Cylinders",
+       y = "Count of Cars",
+       fill = "Transmission") +
+  theme_minimal()
+
+```
+
+### The two plots above already suggests that mpg correlates clearly with other variables. Let's plot it using the cor() function
+
+```{r}
+
+cor(mtcars)
+
+```
+
+# 3. Fit of multiple models
+
+```{r}
+#Regression analysis of mpg with all variables
+fullModel <- lm(mpg ~ ., data = mtcars)
+summary(fullModel)
+
+```
+
+### The model has a residual standard error of 2.65 on 21 degrees of freedom. The adjusted R-squared is 0.8066, which means that the model can explain about 81% of variance. However, since none of the coefficients have a p-value less than 0.05 we cannot conclude which variables are more statistically significant.
+
+### Backword selection to determine what variables are most significant
+
+```{r}
+stepFit <- step(fullModel)
+summary(stepFit)
+
+```
+### The new modal has 3 variables (wt, qsec, and am) that influence MPG. The R-squared is 0.8336 and all p-values are significant. 
+
+
+### The "Pair Graph of mtcars variables" suggests a strong interaction betwee the wt and am variables. Automatic cars tend to weigh more than manual cars. Therefore, the following model includes the interaction
+
+```{r}
+
+amIntWtModel<-lm(mpg ~ wt + qsec + am + wt:am, data=mtcars)
+summary(amIntWtModel)
+
+```
+### This model gives an even higher R-squared of 0.8804. Therefore, this model can explain 88% of the variance in MPG. 
+
+
+# Residual Analysis and Diagnostics
+
+```{r}
+par(mfrow = c(2, 2))
+plot(amIntWtModel)
+```
+
+### According to the residual plots, the following conclusions can be drawn:
+### 1. No consistent pattern is observed in the "Residuals vs Fitted" plot, supportingthe accuracy of independent assumption
+### 2. The "Normal Q-Q Residuals" plot indicates that the residual are normally distributed as the points are close to the line.
+### 3. The "Scale-Location" plot confirms the constant variance assumption, as the points are randomly distributed.
+### 4. The "Residuals vs. Leverage" argues that no outliers are present, as all values fall well within the 0.5 bands.
 
